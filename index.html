@@ -1,146 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Illustration Dashboard - Artilab Studio</title>
-    
+    <title>Artilab Studio | Order Dashboard</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://unpkg.com/lucide-react"></script>
-
-    <style>
-        @media print {
-            body { background: white !important; margin: 0; padding: 20px; }
-            .print-hidden, header, .lg\:col-span-1, button, .no-print { display: none !important; }
-            .max-w-7xl { max-width: 100% !important; margin: 0 !important; }
-            .bg-indigo-600 { background-color: #4f46e5 !important; -webkit-print-color-adjust: exact; color: white !important; }
-            .bg-indigo-50 { background-color: #f5f3ff !important; -webkit-print-color-adjust: exact; }
-            .text-indigo-600 { color: #4f46e5 !important; }
-            .rounded-3xl, .rounded-2xl { border-radius: 8px !important; }
-            .shadow-xl, .shadow-sm { box-shadow: none !important; }
-            .grid { display: block !important; }
-            .md\:grid-cols-3 { display: flex !important; gap: 10px !important; margin-bottom: 20px !important; }
-            .md\:grid-cols-3 > div { flex: 1; border: 1px solid #e2e8f0; }
-            .lg\:col-span-3 { width: 100% !important; }
-            input, select { border: none !important; appearance: none !important; background: transparent !important; }
-            @page { margin: 1cm; }
-        }
-    </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
 
     <script type="text/babel">
-        // Mengambil ikon dari library Lucide
-        const { 
-            Plus, Trash2, Copy, Check, Calculator, User, 
-            Image, PawPrint, Tag, Percent, Users, Download, 
-            Printer, FileText 
-        } = LucideReact;
-
-        const { useState, useEffect } = React;
+        const { useState } = React;
 
         const App = () => {
-            // Data tarif awal (Bisa kamu ubah di sini)
-            const [rates, setRates] = useState({
-                halfBody: 17.08,
-                fullBody: 13.66,
-                pet: 10,
-                discountPercent: 0 
-            });
-
-            // State pesanan (Data awal dari Artilab Studio)
+            // Rate sesuai dengan data operasional Artilab Studio
+            const [rates, setRates] = useState({ halfBody: 17.08, fullBody: 13.66, pet: 10, discount: 0 });
             const [orders, setOrders] = useState([
-                { id: 1, clientName: 'Sasha_Isaac', framing: 'fullBody', peopleCount: 2, pets: 0 },
-                { id: 2, clientName: 'Pau_Isaac', framing: 'fullBody', peopleCount: 2, pets: 0 },
-                { id: 3, clientName: 'Manuel_family', framing: 'fullBody', peopleCount: 4, pets: 0 },
-                { id: 4, clientName: 'Antonio_family', framing: 'fullBody', peopleCount: 0, pets: 0 },
-                { id: 5, clientName: 'Ale', framing: 'fullBody', peopleCount: 1, pets: 0 },
-                { id: 8, clientName: 'Oli_Lama', framing: 'halfBody', peopleCount: 2, pets: 2 },
-                { id: 17, clientName: 'Xyzer', framing: 'halfBody', peopleCount: 1, pets: 1 }
+                { id: 1, name: 'Client Baru', framing: 'halfBody', qty: 1, pets: 0 }
             ]);
 
-            const [copiedId, setCopiedId] = useState(null);
+            const addOrder = () => setOrders([{ id: Date.now(), name: '', framing: 'halfBody', qty: 1, pets: 0 }, ...orders]);
+            const updateOrder = (id, field, val) => setOrders(orders.map(o => o.id === id ? {...o, [field]: val} : o));
+            const deleteOrder = (id) => setOrders(orders.filter(o => o.id !== id));
 
-            // Kalkulasi Statistik
-            const grandSubtotal = orders.reduce((sum, order) => {
-                const pricePerPerson = rates[order.framing];
-                return sum + ((order.peopleCount || 0) * pricePerPerson) + ((order.pets || 0) * rates.pet);
-            }, 0);
-
-            const totalDiscountAmount = grandSubtotal * (rates.discountPercent / 100);
-            const grandTotal = grandSubtotal - totalDiscountAmount;
-
-            const addOrder = () => {
-                setOrders([{ id: Date.now(), clientName: '', framing: 'halfBody', peopleCount: 1, pets: 0 }, ...orders]);
+            const calculateTotal = (o) => {
+                const sub = (o.qty * rates[o.framing]) + (o.pets * rates.pet);
+                return sub - (sub * (rates.discount / 100));
             };
 
-            const removeOrder = (id) => {
-                setOrders(orders.filter(order => order.id !== id));
-            };
-
-            const updateOrder = (id, field, value) => {
-                setOrders(orders.map(order => order.id === id ? { ...order, [field]: value } : order));
-            };
-
-            const calculateSubtotal = (order) => {
-                const pricePerPerson = rates[order.framing];
-                return ((order.peopleCount || 0) * pricePerPerson) + ((order.pets || 0) * rates.pet);
-            };
-
-            const calculateTotal = (order) => {
-                const subtotal = calculateSubtotal(order);
-                return subtotal - (subtotal * (rates.discountPercent / 100));
-            };
-
-            const formatCurrency = (amount) => {
-                return new Intl.NumberFormat('en-US', {
-                    style: 'currency', currency: 'USD', minimumFractionDigits: 2
-                }).format(amount);
-            };
-
-            const handlePrint = () => window.print();
-
-            const copyToClipboard = (order) => {
-                const framingLabel = order.framing === 'halfBody' ? 'Half Body' : 'Full Body';
-                const subtotal = calculateSubtotal(order);
-                const total = calculateTotal(order);
-                const text = `*ILLUSTRATION INVOICE*\n\nHi ${order.clientName || 'Client'},\n Framing: ${framingLabel}\n Total People: ${order.peopleCount}\n Total Pets: ${order.pets}\n---------------------------\nTotal: ${formatCurrency(total)}\n\nThank you!`;
-                navigator.clipboard.writeText(text);
-                setCopiedId(order.id);
-                setTimeout(() => setCopiedId(null), 2000);
-            };
+            const grandTotal = orders.reduce((acc, o) => acc + calculateTotal(o), 0);
 
             return (
-                <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900 overflow-x-hidden">
-                    <div className="max-w-7xl mx-auto">
-                        <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
-                            <div>
-                                <h1 className="text-3xl font-black text-indigo-700 flex items-center gap-2">
-                                    <Calculator className="w-8 h-8" /> Artilab Illustration Dashboard
-                                </h1>
-                                <p className="text-slate-500 font-medium">SOP & Order Counter for Creative Team.</p>
-                            </div>
-                            <button onClick={handlePrint} className="bg-slate-800 hover:bg-black text-white px-6 py-3 rounded-2xl flex items-center gap-2 transition-all font-bold shadow-lg">
-                                <Download size={18} /> Export as PDF (Print)
-                            </button>
-                        </header>
+                <div className="max-w-4xl mx-auto p-6 md:p-12 min-h-screen">
+                    <header className="flex justify-between items-center mb-10 print:hidden">
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tighter text-indigo-600 italic">ARTILAB STUDIO</h1>
+                            <p className="text-slate-400 font-medium text-sm">Illustration Order Counter & PDF Invoice</p>
+                        </div>
+                        <button onClick={() => window.print()} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:scale-105 transition-all">
+                            Export PDF / Cetak
+                        </button>
+                    </header>
 
-                        {/* Stats Bar */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Subtotal</span>
-                                <span className="text-2xl font-black text-slate-700">{formatCurrency(grandSubtotal)}</span>
+                    {/* Dashboard Stats */}
+                    <div className="grid md:grid-cols-3 gap-4 mb-8 print:hidden">
+                        <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Rates</span>
+                            <div className="mt-2 text-xs font-bold space-y-1">
+                                <div className="flex justify-between"><span>Half Body</span><span>${rates.halfBody}</span></div>
+                                <div className="flex justify-between"><span>Full Body</span><span>${rates.fullBody}</span></div>
                             </div>
-                            <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100">
-                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Savings ({rates.discountPercent}%)</span>
-                                <span className="text-2xl font-black text-indigo-600">-{formatCurrency(totalDiscountAmount)}</span>
+                        </div>
+                        <div className="bg-indigo-50 p-5 rounded-3xl border border-indigo-100">
+                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Diskon (%)</span>
+                            <input type="number" value={rates.discount} onChange={e => setRates({...rates, discount: e.target.value})} className="w-full bg-transparent text-2xl font-black text-indigo-600 outline-none" />
+                        </div>
+                        <div className="bg-indigo-600 p-5 rounded-3xl shadow-xl text-white">
+                            <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Total Pendapatan</span>
+                            <p className="text-3xl font-black">${grandTotal.toFixed(2)}</p>
+                        </div>
+                    </div>
+
+                    {/* Order List */}
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center mb-4 print:hidden">
+                            <h2 className="font-black text-slate-700 uppercase text-sm tracking-widest">Daftar Invoices</h2>
+                            <button onClick={addOrder} className="text-indigo-600 font-bold text-sm hover:underline">+ Tambah Order</button>
+                        </div>
+
+                        {orders.map(o => (
+                            <div key={o.id} className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-wrap md:flex-nowrap items-center gap-4 shadow-sm print:border-b print:rounded-none print:shadow-none">
+                                <input className="flex-1 min-w-[150px] font-bold text-slate-700 outline-none" placeholder="Nama Client..." value={o.name} onChange={e => updateOrder(o.id, 'name', e.target.value)} />
+                                <div className="flex items-center gap-2">
+                                    <select value={o.framing} onChange={e => updateOrder(o.id, 'framing', e.target.value)} className="bg-slate-50 p-2 rounded-xl text-xs font-bold outline-none">
+                                        <option value="halfBody">Half Body</option>
+                                        <option value="fullBody">Full Body</option>
+                                    </select>
+                                    <input type="number" value={o.qty} onChange={e => updateOrder(o.id, 'qty', e.target.value)} className="w-10 text-center font-black text-indigo-600" title="Jumlah Orang" />
+                                </div>
+                                <div className="text-right min-w-[100px] font-black text-indigo-600 text-lg">
+                                    ${calculateTotal(o).toFixed(2)}
+                                </div>
+                                <button onClick={() => deleteOrder(o.id)} className="text-slate-200 hover:text-red-400 print:hidden">✕</button>
                             </div>
-                            <div className="bg-indigo-600 p-6 rounded-3xl shadow-xl text-white relative overflow-hidden">
-                                <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest block mb-1">Grand Total Income</span>
-                                <span className="text-3xl font-black">{formatCurrency(grandTotal)}</span>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <style>
+        @media print {
+            body { background: white !important; }
+            .print\:hidden { display: none !important; }
+            input, select { border: none !important; appearance: none !important; pointer-events: none !important; }
+        }
+    </style>
+</body>
+</html>
